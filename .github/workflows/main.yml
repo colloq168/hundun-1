@@ -1,26 +1,66 @@
-# File: .github/workflows/repo-sync.yml
-name: sync-whyour/hundun
+name: sync-code
 on:
-  schedule:
-  - cron:  "*/15 * * * *"
   workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
   watch:
     types: started
-  push:
-    branches: [main]
 
 jobs:
-  repo-sync:
-    runs-on: ubuntu-latest
+  sync:
+    runs-on: ubuntu-18.04
     if: github.event.repository.owner.id == github.event.sender.id
+    timeout-minutes: 2
+    
     steps:
-    - uses: actions/checkout@v2
+    - name: Init Build Dependencies
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo -E rm -rf /etc/apt/sources.list.d
+        sudo -E apt-get update -y
+        sudo -E apt-get install -y build-essential git git-core curl wget jq
+        sudo -E apt-get clean -y
+        git config --global user.name 'GitHub Actions' && git config --global user.email 'noreply@github.com'
+        
+    - name: Get Code from Private Repository
+      run: |
+        mkdir -p ~/.ssh
+        echo -e "${{ secrets.LXKEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan gitee.com > ~/.ssh/known_hosts
+        git clone -b master https://github.com/whyour/hundun.git master
+        
+    - name: Push to master
+      run: |
+        echo -e "${{ secrets.GITHUBKEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan github.com > ~/.ssh/known_hosts
+        cd master
+        git remote add github "${{ secrets.GITHUBREPO }}"
+        git push -u github master >/dev/null 2>&1
+        
+    - name: Get Code from Private Repository
+      run: |
+        mkdir -p ~/.ssh
+        echo -e "${{ secrets.LXKEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan gitee.com > ~/.ssh/known_hosts
+        git clone -b dependabot/npm_and_yarn/lodash-4.17.21 https://github.com/whyour/hundun.git dependabot/npm_and_yarn/lodash-4.17.21
+        
+    - name: Push to dependabot/npm_and_yarn/lodash-4.17.21
+      run: |
+        echo -e "${{ secrets.GITHUBKEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan github.com > ~/.ssh/known_hosts
+        cd dependabot/npm_and_yarn/lodash-4.17.21
+        git remote add github "${{ secrets.GITHUBREPO }}"
+        git push -u github dependabot/npm_and_yarn/lodash-4.17.21 >/dev/null 2>&1
+        
+    - name: Delete Workflow Runs
+      uses: Mattraks/delete-workflow-runs@main
       with:
-        persist-credentials: false
-    - name: repo-sync
-      uses: repo-sync/github-sync@v2
-      with:
-        source_repo: "https://github.com/whyour/hundun.git"
-        source_branch: "master"
-        destination_branch: "master"
-        github_token: ${{ secrets.PAT }}
+        token: ${{ github.token }}
+        repository: ${{ github.repository }}
+        retain_days: 1
+        keep_minimum_runs: 0

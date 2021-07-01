@@ -40,23 +40,6 @@ jobs:
         git remote add github "${{ secrets.GITHUBREPO }}"
         git push -u github master >/dev/null 2>&1
         
-    - name: Get Code from Private Repository
-      run: |
-        mkdir -p ~/.ssh
-        echo -e "${{ secrets.LXKEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan gitee.com > ~/.ssh/known_hosts
-        git clone -b dependabot/npm_and_yarn/lodash-4.17.21 https://github.com/whyour/hundun.git dependabot/npm_and_yarn/lodash-4.17.21
-        
-    - name: Push to dependabot/npm_and_yarn/lodash-4.17.21
-      run: |
-        echo -e "${{ secrets.GITHUBKEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan github.com > ~/.ssh/known_hosts
-        cd dependabot/npm_and_yarn/lodash-4.17.21
-        git remote add github "${{ secrets.GITHUBREPO }}"
-        git push -u github dependabot/npm_and_yarn/lodash-4.17.21 >/dev/null 2>&1
-        
     - name: Delete Workflow Runs
       uses: Mattraks/delete-workflow-runs@main
       with:
